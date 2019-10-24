@@ -42,7 +42,8 @@ def main():
             [0, 0, 0, 0, 0, 0, 0]]])
 
     Pol = np.array([[0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]])
-    # P = MDP_P(A, Pol)
+    P = MDP_P(A, Pol)
+    _R = MDP_R(A, Pol, R)
     #
     # Pol, stable = pol_improve(A, R, Pol, V, 0.9)
     Pol = pol_iterate(A, R, Pol, 1, .0001)
@@ -50,6 +51,11 @@ def main():
     print(Pol)
     print('\n')
     print(V)
+    r=0
+    s=np.ones(7)/7
+    for i in range(1000):
+        s
+    pdb.set_trace()
     return
 
 
@@ -66,8 +72,8 @@ def MDP_P(A, Pol):
 
 # A[a][s][s'] Na*N*N, Pol[a][s] Na*N, S[s] N*1
 def MDP_R(A, Pol, R):
-    N = Pol.shape[0]
-    R = np.zeros((N, N))
+    N = Pol.shape[1]
+    R = np.zeros((Pol.shape[0], N, N))
     for (i, a_P) in enumerate(A):
         _Pol = np.array([Pol[i, :], ] * N)
         _R = np.multiply(_Pol, a_P)
@@ -112,6 +118,21 @@ def pol_iterate(P, R, Pol, gamma, lim_delta):
 
     return Pol
 
+def val_iterate(P, R, Pol, gamma, lim_delta):
+    delta = 0
+    V = np.zeros(Pol.shape[1])
+    _V = np.array(V)
+    v = np.zeros(Pol.shape[0])
+    while True:
+        _V = np.array(V)
+        for s in range(Pol.shape[1]):
+            for a in range(len(Pol[:, s])):
+                v[a] = np.dot(P[a, :, s], (R[a, :, s] + gamma * _V))
+            V[s] = np.dot(v, Pol[:, s])
+            delta = np.linalg.norm(_V - V)
+        if delta < lim_delta:
+            break
+    return V
 
 def step(pos, Pol, Act, Rew):
     _act = np.random.choice(Pol.shape[1], p=Pol[:, pos])
