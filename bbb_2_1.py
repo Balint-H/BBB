@@ -1,6 +1,6 @@
 import numpy as np
 import pdb
-
+np.set_printoptions(precision=2)
 
 def main():
     S = np.zeros(7)
@@ -77,9 +77,9 @@ def pol_eval(P, R, S, Pol, gamma, lim_delta):
     while True:
         _V = np.array(V)
         for s in range(len(S)):
-            for (a, _Pol) in enumerate(Pol[:, s]):
-                v[a] = _Pol * np.sum(np.dot(P[a, :, s], (R[a, :, s] + gamma * _V)))
-            V[s] = np.sum(v)
+            for a in range(len(Pol[:, s])):
+                v[a] = np.dot(P[a, :, s], (R[a, :, s] + gamma * _V))
+            V[s] = np.dot(v, Pol[:, s])
             delta = np.linalg.norm(_V - V)
             print(V)
         if delta < lim_delta:
