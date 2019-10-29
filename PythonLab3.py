@@ -1,7 +1,7 @@
 # %%
 import numpy as np
 import matplotlib.pyplot as plt
-
+import bbb_2_1
 
 # %%
 class GridWorld(object):
@@ -143,12 +143,12 @@ class GridWorld(object):
         plt.figure()
 
         plt.imshow(self.walls + self.rewarders + self.absorbers)
-        plt.hold('on')
+#        plt.hold(True)
         for state, action in enumerate(Policy):
             if (self.absorbing[0, state]):
                 continue
             arrows = [r"$\uparrow$", r"$\rightarrow$", r"$\downarrow$", r"$\leftarrow$"]
-            action_arrow = arrows[action]
+            action_arrow = arrows[np.nonzero(action)[0][0]]
             location = self.locs[state]
             plt.text(location[1], location[0], action_arrow, ha='center', va='center')
 
@@ -301,13 +301,20 @@ print("The value of that policy is : {}".format(val))
 locs, state_neighbours, absorbing = grid.get_topology()
 sta = np.zeros(grid.shape);
 for i, st in enumerate(val):
-    sta[locs[i]] = st
+    sta[locs[i]] = i
 
 fig=plt.figure(2)
 a = plt.imshow(sta)
-plt.show (a)
+plt.show(a)
 
+Pol=Policy.transpose()
+R=np.rollaxis(grid.get_reward_matrix(),2)
+P=np.rollaxis(grid.get_transition_matrix(),2)
 
+idealPol = bbb_2_1.pol_iterate(P, R, Pol, 0.9, 0.01)
+
+Policy = idealPol.transpose()
+grid.draw_deterministic_policy(Policy)
 # %%
 # Using draw_deterministic_policy to illustrate some arbitracy policy.
 Policy2 = np.zeros(22).astype(int)

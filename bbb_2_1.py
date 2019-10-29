@@ -1,5 +1,5 @@
 import numpy as np
-import pdb
+
 
 np.set_printoptions(precision=2)
 
@@ -44,18 +44,23 @@ def main():
     Pol = np.array([[0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]])
     P = MDP_P(A, Pol)
     _R = MDP_R(A, Pol, R)
-    #
-    # Pol, stable = pol_improve(A, R, Pol, V, 0.9)
-    Pol = pol_iterate(A, R, Pol, 1, .0001)
-    V = pol_eval(A, R, Pol, 1, 0.0001)
+
+    V = pol_eval(A, R, Pol, 0.9, 0.0001)
     print(Pol)
     print('\n')
     print(V)
-    r=0
-    s=np.ones(7)/7
-    for i in range(1000):
-        s
-    pdb.set_trace()
+    print('\n\n')
+    Pol = pol_iterate(A, R, Pol, 0.9, .0001)
+    V = pol_eval(A, R, Pol, 0.8, 0.0001)
+    print(Pol)
+    print('\n')
+    print(V)
+    print('\n\n')
+
+    V = val_iterate(A, R, 0.8, 0.0001)
+    print('\n')
+    print(V)
+    print('\n\n')
     return
 
 
@@ -92,7 +97,7 @@ def pol_eval(P, R, Pol, gamma, lim_delta):
             for a in range(len(Pol[:, s])):
                 v[a] = np.dot(P[a, :, s], (R[a, :, s] + gamma * _V))
             V[s] = np.dot(v, Pol[:, s])
-            delta = np.linalg.norm(_V - V)
+        delta = np.linalg.norm(_V - V)
         if delta < lim_delta:
             break
     return V
@@ -118,21 +123,27 @@ def pol_iterate(P, R, Pol, gamma, lim_delta):
 
     return Pol
 
-def val_iterate(P, R, Pol, gamma, lim_delta):
+
+def val_iterate(P, R, gamma, lim_delta):
     delta = 0
-    V = np.zeros(Pol.shape[1])
+    V = np.zeros(P.shape[1])
     _V = np.array(V)
-    v = np.zeros(Pol.shape[0])
+    v = np.zeros(P.shape[0])
     while True:
         _V = np.array(V)
-        for s in range(Pol.shape[1]):
-            for a in range(len(Pol[:, s])):
+        for s in range(P.shape[1]):
+            for a in range(len(v)):
                 v[a] = np.dot(P[a, :, s], (R[a, :, s] + gamma * _V))
-            V[s] = np.dot(v, Pol[:, s])
-            delta = np.linalg.norm(_V - V)
+            V[s] = np.max(v)
+        delta = np.linalg.norm(_V - V)
         if delta < lim_delta:
             break
-    return V
+    Pol = np.array(np.zeros((len(v), len(V))))
+    for s in range(Pol.shape[1]):
+        decision = np.dot(P[:, :, s], (R[:, :, s] + gamma * V).transpose())
+        Pol[np.argmax(np.diagonal(decision)), s] = 1
+    return Pol, V
+
 
 def step(pos, Pol, Act, Rew):
     _act = np.random.choice(Pol.shape[1], p=Pol[:, pos])
