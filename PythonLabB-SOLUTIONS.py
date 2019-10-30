@@ -5,35 +5,35 @@ import matplotlib.pyplot as plt
 # %%
 class GridWorld(object):
     def __init__(self):
-        
         ### Attributes defining the Gridworld #######
         # Shape of the gridworld
-        self.shape = (5,5)
-        
+        self.shape = (4, 4)
+
         # Locations of the obstacles
-        self.obstacle_locs = [(1,1),(2,1),(2,3)]
-        
+        self.obstacle_locs = [(1, 2), (2, 0), (3, 0), (3, 1), (3, 3)]
+
         # Locations for the absorbing states
-        self.absorbing_locs = [(4,0),(4,1),(4,2),(4,3),(4,4)]
-        
-        # Rewards for each of the absorbing states 
-        self.special_rewards = [10, -100, -100, -100, 10] #corresponds to each of the absorbing_locs
-        
+        self.absorbing_locs = [(3, 2), (0, 2)]
+
+        # Rewards for each of the absorbing states
+        self.special_rewards = [-100, 10]  # corresponds to each of the absorbing_locs
+
         # Reward for all the other states
-        self.default_reward = 0
-        
+        self.default_reward = -1
+
         # Starting location
-        self.starting_loc = (3,0)
-        
+        self.starting_loc = (2, 2)
+
         # Action names
-        self.action_names = ['N','E','S','W']
-        
+        self.action_names = ['N', 'E', 'S', 'W']
+
         # Number of actions
         self.action_size = len(self.action_names)
-        
-        
+
         # Randomizing action results: [1 0 0 0] to no Noise in the action results.
-        self.action_randomizing_array = [0.4, 0.2, 0.2 , 0.2]
+        p = 0.55
+        p_star = (1 - p) / 3
+        self.action_randomizing_array = [p, p_star, p_star, p_star]
         
         ############################################
     
@@ -105,7 +105,7 @@ class GridWorld(object):
     ####### Methods #########
     
     
-    def value_iteration(self, discount = 0.9, threshold = 0.0001):
+    def value_iteration(self, discount = 0.5, threshold = 0.0001):
         V = np.zeros(self.state_size)
         
         T = self.get_transition_matrix()
@@ -142,7 +142,7 @@ class GridWorld(object):
 
 
     
-    def policy_iteration(self, discount=0.9, threshold = 0.0001):
+    def policy_iteration(self, discount=0.5, threshold = 0.0001):
         policy= np.zeros((self.state_size, self.action_size))
         policy[:,0] = 1
         
@@ -176,9 +176,9 @@ class GridWorld(object):
             
             if(policy_stable):
                 return V, policy,epochs
-                
-                
-                
+
+
+
         
     
     def policy_evaluation(self, policy, threshold, discount):
@@ -241,6 +241,23 @@ class GridWorld(object):
             plt.text(location[1], location[0], action_arrow, ha='center', va='center')
     
         plt.show()
+
+    def draw_value(self, val):
+        # Draw a deterministic policy
+        # The policy needs to be a np array of 22 values between 0 and 3 with
+        # 0 -> N, 1->E, 2->S, 3->W
+        plt.figure()
+        sta = np.zeros(grid.shape)
+        for i, st in enumerate(val):
+            sta[self.locs[i]] = st
+        sta += self.walls * 20
+        a = plt.imshow(sta, cmap='viridis')
+        #        plt.hold(True)
+        for state, value in enumerate(val):
+            location = self.locs[state]
+            plt.text(location[1], location[0], "{:.2f}".format(value), ha='center', va='center')
+
+        plt.show()
     ##########################
     
     
@@ -265,7 +282,8 @@ class GridWorld(object):
         
         # Initialise the transition matrix
         T = np.zeros((S,S,4))
-        
+        for abso_s in np.nonzero(absorbing[0]):
+            T[abso_s, abso_s, :] = 1
         for action in range(4):
             for effect in range(4):
                 
@@ -279,6 +297,8 @@ class GridWorld(object):
                 # Fill the transition matrix
                 prob = self.action_randomizing_array[effect]
                 for prior_state in range(S):
+                    if T[prior_state,prior_state,0] == 1:
+                        continue
                     post_state = neighbours[prior_state, outcome]
                     post_state = int(post_state)
                     T[post_state,prior_state,action] = T[post_state,prior_state,action]+prob
@@ -393,7 +413,7 @@ Policy= np.zeros((grid.state_size, grid.action_size))
 Policy = Policy + 0.25
 print("The Policy is : {}".format(Policy))
 
-val, epochs = grid.policy_evaluation(Policy,0.001,0.9)
+val, epochs = grid.policy_evaluation(Policy,0.001,0.5)
 print("The value of that policy is :{}".format(val))
 print("It took {} epochs".format(epochs))
 
@@ -413,7 +433,7 @@ V_opt, pol_opt, epochs = grid.policy_iteration()
 print("The value of the optimal policy using policy iteration is {}:".format(V_opt))
 print("The optimal policy using policy iteration is {}".format(pol_opt))
 print("The number of epochs for convergence are {}".format(epochs))
-
+grid.draw_value(V_opt)
 
 pol_opt2, epochs = grid.value_iteration()
 print("The optimal policy using value iteration is {}".format(pol_opt2))
