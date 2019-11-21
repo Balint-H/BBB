@@ -1,6 +1,5 @@
 import numpy as np
 
-
 np.set_printoptions(precision=2)
 
 
@@ -57,9 +56,10 @@ def main():
     print(V)
     print('\n\n')
 
-    V = val_iterate(A, R, 0.8, 0.0001)
+    Pol_V, VV, ep = val_iterate(A, R, 0.8, 0.0001)
+    print(Pol_V)
     print('\n')
-    print(V)
+    print(VV)
     print('\n\n')
     return
 
@@ -86,18 +86,21 @@ def MDP_R(A, Pol, R):
     return R
 
 
+
 def pol_eval(P, R, Pol, gamma, lim_delta):
-    delta = 0
     V = np.zeros(Pol.shape[1])
-    _V = np.array(V)
     v = np.zeros(Pol.shape[0])
     while True:
         _V = np.array(V)
+        delta = 0
         for s in range(Pol.shape[1]):
+            if P[0,s,s] == 1:
+                continue
             for a in range(len(Pol[:, s])):
                 v[a] = np.dot(P[a, :, s], (R[a, :, s] + gamma * _V))
             V[s] = np.dot(v, Pol[:, s])
-        delta = np.linalg.norm(_V - V)
+            delta = np.max((np.abs(_V[s]-V[s]), delta))
+        print(V)
         if delta < lim_delta:
             break
     return V
@@ -120,29 +123,30 @@ def pol_iterate(P, R, Pol, gamma, lim_delta):
     while not stable:
         V = pol_eval(P, R, Pol, gamma, lim_delta)
         Pol, stable = pol_improve(P, R, Pol, V, gamma)
-
     return Pol
 
 
 def val_iterate(P, R, gamma, lim_delta):
-    delta = 0
     V = np.zeros(P.shape[1])
     _V = np.array(V)
     v = np.zeros(P.shape[0])
+    epoch = 1
     while True:
+        epoch += 1
         _V = np.array(V)
+        delta = 0
         for s in range(P.shape[1]):
             for a in range(len(v)):
                 v[a] = np.dot(P[a, :, s], (R[a, :, s] + gamma * _V))
             V[s] = np.max(v)
-        delta = np.linalg.norm(_V - V)
+            delta = np.max((delta, np.abs(_V[s] - V[s])))
         if delta < lim_delta:
             break
     Pol = np.array(np.zeros((len(v), len(V))))
     for s in range(Pol.shape[1]):
         decision = np.dot(P[:, :, s], (R[:, :, s] + gamma * V).transpose())
         Pol[np.argmax(np.diagonal(decision)), s] = 1
-    return Pol, V
+    return Pol, V, epoch
 
 
 def step(pos, Pol, Act, Rew):

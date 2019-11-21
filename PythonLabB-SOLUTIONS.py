@@ -1,6 +1,7 @@
 # %%
 import numpy as np
 import matplotlib.pyplot as plt
+import myBellman as mB
 
 # %%
 class GridWorld(object):
@@ -13,10 +14,10 @@ class GridWorld(object):
         self.obstacle_locs = [(1, 2), (2, 0), (3, 0), (3, 1), (3, 3)]
 
         # Locations for the absorbing states
-        self.absorbing_locs = [(3, 2), (0, 2)]
+        self.absorbing_locs = [(0, 1), (3, 2)]
 
         # Rewards for each of the absorbing states
-        self.special_rewards = [-100, 10]  # corresponds to each of the absorbing_locs
+        self.special_rewards = [10, -100]  # corresponds to each of the absorbing_locs
 
         # Reward for all the other states
         self.default_reward = -1
@@ -31,9 +32,9 @@ class GridWorld(object):
         self.action_size = len(self.action_names)
 
         # Randomizing action results: [1 0 0 0] to no Noise in the action results.
-        p = 0.55
-        p_star = (1 - p) / 3
-        self.action_randomizing_array = [p, p_star, p_star, p_star]
+        self.p = 0.35
+        p_star = (1 - self.p) / 3
+        self.action_randomizing_array = [self.p, p_star, p_star, p_star]
         
         ############################################
     
@@ -84,7 +85,7 @@ class GridWorld(object):
             self.rewarders[rew] = self.special_rewards[i]
         
         #Illustrating the grid world
-        self.paint_maps()
+        #self.paint_maps()
         ################################
     
     
@@ -103,8 +104,29 @@ class GridWorld(object):
     ########################
     
     ####### Methods #########
-    
-    
+    def update_randomizer(self, p_in):
+        self.p = p_in
+        p_star = (1 - self.p) / 3
+        self.action_randomizing_array = [self.p, p_star, p_star, p_star]
+        # Get attributes defining the world
+        state_size, T, R, absorbing, locs = self.build_grid_world()
+
+        # Number of valid states in the gridworld (there are 22 of them)
+        self.state_size = state_size
+
+        # Transition operator (3D tensor)
+        self.T = T
+
+        # Reward function (3D tensor)
+        self.R = R
+
+        # Absorbing states
+        self.absorbing = absorbing
+
+        # The locations of the valid states
+        self.locs = locs
+        return
+
     def value_iteration(self, discount = 0.5, threshold = 0.0001):
         V = np.zeros(self.state_size)
         
@@ -139,8 +161,6 @@ class GridWorld(object):
 
                 
                 return optimal_policy,epochs
-
-
     
     def policy_iteration(self, discount=0.5, threshold = 0.0001):
         policy= np.zeros((self.state_size, self.action_size))
@@ -176,10 +196,6 @@ class GridWorld(object):
             
             if(policy_stable):
                 return V, policy,epochs
-
-
-
-        
     
     def policy_evaluation(self, policy, threshold, discount):
         
@@ -223,41 +239,63 @@ class GridWorld(object):
             V=np.copy(Vnew)
             
         return V, epoch
-    
-    def draw_deterministic_policy(self, Policy):
-        # Draw a deterministic policy
-        # The policy needs to be a np array of 22 values between 0 and 3 with
-        # 0 -> N, 1->E, 2->S, 3->W
-        plt.figure()
-        
-        plt.imshow(self.walls+self.rewarders +self.absorbers)
-        #plt.hold('on')
-        for state, action in enumerate(Policy):
-            if(self.absorbing[0,state]):
-                continue
-            arrows = [r"$\uparrow$",r"$\rightarrow$", r"$\downarrow$", r"$\leftarrow$"]
-            action_arrow = arrows[action]
-            location = self.locs[state]
-            plt.text(location[1], location[0], action_arrow, ha='center', va='center')
-    
-        plt.show()
 
-    def draw_value(self, val):
+    def draw_deterministic_policy(self, Policy, plt_now=True, ep = -1):
         # Draw a deterministic policy
         # The policy needs to be a np array of 22 values between 0 and 3 with
         # 0 -> N, 1->E, 2->S, 3->W
-        plt.figure()
+        if plt_now:
+            plt.figure()
+        abso_im = np.copy(self.absorbers)
+        abso_im[self.absorbing_locs[1]] -= 1
+        plt.imshow(self.walls * 5 + abso_im)
+        #        plt.hold(True)
+        Pol = [np.argmax(Policy[row, :]) for row in range(Policy.shape[0])]
+        for state, action in enumerate(Pol):
+            location = self.locs[state]
+            if (self.absorbing[0, state]):
+                idx = self.absorbing_locs.index(location)
+                rew_to_print = self.special_rewards[idx]
+                if rew_to_print > 0:
+                    plt.text(location[1], location[0], "+{:.0f}".format(self.special_rewards[idx]),
+                             ha='center', va='center', color='w')
+                else:
+                    plt.text(location[1], location[0], "{:.0f}".format(self.special_rewards[idx]),
+                             ha='center', va='center', color='w')
+                continue
+            arrows = [r"$\uparrow$", r"$\rightarrow$", r"$\downarrow$", r"$\leftarrow$"]
+            action_arrow = arrows[action]
+
+            plt.text(location[1], location[0], action_arrow, ha='center', va='center')
+        if not ep == -1:
+            plt.text(0.5, 3, "epochs:{:.0f}".format(ep), ha='center', va='center', fontsize=8)
+        if plt_now:
+            plt.show()
+
+    def draw_value(self, val, plt_now=True, ep = -1):
+        if plt_now:
+            plt.figure()
         sta = np.zeros(grid.shape)
         for i, st in enumerate(val):
             sta[self.locs[i]] = st
-        sta += self.walls * 20
-        a = plt.imshow(sta, cmap='viridis')
-        #        plt.hold(True)
+        sta += np.array(self.walls * 20)
+        abso_im = np.array(self.absorbers)
+        abso_im[self.absorbing_locs[0]] += 11
+        abso_im[self.absorbing_locs[1]] -= 1
+        plt.imshow(sta+abso_im, cmap='viridis')
         for state, value in enumerate(val):
             location = self.locs[state]
+            if (self.absorbing[0, state]):
+                abs_st = self.absorbing_locs.index(self.locs[state])
+                plt.text(location[1], location[0], "Absorbing:\n{:.0f}".format(self.special_rewards[abs_st]),
+                         ha='center', va='center')
+                continue
             plt.text(location[1], location[0], "{:.2f}".format(value), ha='center', va='center')
+        if not ep == -1:
+            plt.text(0.5, 3, "epochs:{:.0f}".format(ep), ha='center', va='center', fontsize=10)
 
-        plt.show()
+        if plt_now:
+            plt.show()
     ##########################
     
     
@@ -361,7 +399,6 @@ class GridWorld(object):
         #takes list of locations and gives index corresponding to input loc
         return locs.index(tuple(loc))
 
-
     def is_location(self, loc):
         # It is a valid location if it is in grid and not obstacle
         if(loc[0]<0 or loc[1]<0 or loc[0]>self.shape[0]-1 or loc[1]>self.shape[1]-1):
@@ -395,58 +432,45 @@ class GridWorld(object):
             return loc
         
 ###########################################         
-    
-                
-                        
-                
-        
-        
-        
-        
-        
+
 
 # %%
 grid = GridWorld()
+R=np.rollaxis(grid.get_reward_matrix(), 2)
+P=np.rollaxis(grid.get_transition_matrix(), 2)
+pol_opt, V, ep = mB.val_iterate(P, R, 0.65, 0.0001)
+pol_opt = pol_opt.transpose()
 
-### Question 1 : Change the policy here:
-Policy= np.zeros((grid.state_size, grid.action_size))
-Policy = Policy + 0.25
-print("The Policy is : {}".format(Policy))
-
-val, epochs = grid.policy_evaluation(Policy,0.001,0.5)
-print("The value of that policy is :{}".format(val))
-print("It took {} epochs".format(epochs))
-
-
-gamma_range = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-epochs_needed = []
-for gamma in gamma_range:
-    val, epochs = grid.policy_evaluation(Policy,0.001,gamma)
-    epochs_needed.append(epochs)
-    
 plt.figure()
-plt.plot(gamma_range,epochs_needed)
+plt.subplot(1, 2, 1)
+grid.draw_deterministic_policy(pol_opt, False)
+plt.title("Optimal Policy for $p=0.35$ & $\gamma=0.65$")
+plt.axis("off")
+plt.subplot(1, 2, 2)
+grid.draw_value(V, False, ep)
+plt.title("Estimated Values for $p=0.35$ & $\gamma=0.65$")
+plt.axis("off")
 plt.show()
 
+for row, cur_gamma in enumerate([0.2, 0.65, 0.9]):
+    for col, cur_p in enumerate([0.28, 0.35, 0.65, 0.9]):
+        grid.update_randomizer(cur_p)
+        R = np.rollaxis(grid.get_reward_matrix(), 2)
+        P = np.rollaxis(grid.get_transition_matrix(), 2)
 
-V_opt, pol_opt, epochs = grid.policy_iteration()
-print("The value of the optimal policy using policy iteration is {}:".format(V_opt))
-print("The optimal policy using policy iteration is {}".format(pol_opt))
-print("The number of epochs for convergence are {}".format(epochs))
-grid.draw_value(V_opt)
+        pol_opt, val, epochs = mB.val_iterate(P, R, cur_gamma, 0.0001)
+        plt.subplot(3, 4, row*4+col+1)
+        grid.draw_deterministic_policy(pol_opt.transpose(), False, ep=epochs)
+        fr = plt.gca()
+        fr.axes.get_xaxis().set_ticks([])
+        fr.axes.get_yaxis().set_ticks([])
 
-pol_opt2, epochs = grid.value_iteration()
-print("The optimal policy using value iteration is {}".format(pol_opt2))
-print("The number of epocs for convergence is {}".format(epochs))
+        if col == 0:
+            plt.ylabel("$\gamma = {}$".format(cur_gamma))
+        if row == 0:
+            plt.title("$p = {}$".format(cur_p))
 
-
-
-# %%
-# Using draw_deterministic_policy to illustrate some arbitracy policy.
-Policy2 = np.array([np.argmax(pol_opt[row,:]) for row in range(grid.state_size)])
-
-
-grid.draw_deterministic_policy(Policy2)
+plt.show()
 
 
 # %%

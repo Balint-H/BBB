@@ -32,7 +32,6 @@ def main():
     print(V)
     print('\n\n')
     return
-    return
 
 
 if __name__ == '__main__':

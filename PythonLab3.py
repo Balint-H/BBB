@@ -15,7 +15,7 @@ class GridWorld(object):
         self.obstacle_locs = [(1, 2), (2, 0), (3, 0), (3, 1), (3, 3)]
 
         # Locations for the absorbing states
-        self.absorbing_locs = [(3,2), (0,2)]
+        self.absorbing_locs = [(3,2), (0,1)]
 
         # Rewards for each of the absorbing states 
         self.special_rewards = [-100, 10]  # corresponds to each of the absorbing_locs
@@ -33,9 +33,9 @@ class GridWorld(object):
         self.action_size = len(self.action_names)
 
         # Randomizing action results: [1 0 0 0] to no Noise in the action results.
-        p=0.55
-        p_star = (1-p)/3
-        self.action_randomizing_array = [p, p_star, p_star, p_star]
+        self.p = 0.35
+        p_star = (1-self.p)/3
+        self.action_randomizing_array = [self.p, p_star, p_star, p_star]
 
         ############################################
 
@@ -86,7 +86,6 @@ class GridWorld(object):
         ################################
 
     ####### Getters ###########
-
     def get_transition_matrix(self):
         return self.T
 
@@ -96,6 +95,30 @@ class GridWorld(object):
     ########################
 
     ####### Methods #########
+    def update_randomizer(self, p_in):
+        self.p = p_in
+        p_star = (1 - self.p) / 3
+        self.action_randomizing_array = [self.p, p_star, p_star, p_star]
+        # Get attributes defining the world
+        state_size, T, R, absorbing, locs = self.build_grid_world()
+
+        # Number of valid states in the gridworld (there are 22 of them)
+        self.state_size = state_size
+
+        # Transition operator (3D tensor)
+        self.T = T
+
+        # Reward function (3D tensor)
+        self.R = R
+
+        # Absorbing states
+        self.absorbing = absorbing
+
+        # The locations of the valid states
+        self.locs = locs
+
+        return
+
     def policy_evaluation(self, policy, threshold, discount):
 
         # Make sure delta is bigger than the threshold to start with

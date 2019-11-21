@@ -41,21 +41,24 @@ def pol_iterate(P, R, Pol, gamma, lim_delta):
 
 
 def val_iterate(P, R, gamma, lim_delta):
-    delta = 0
     V = np.zeros(P.shape[1])
-    _V = np.array(V)
-    v = np.zeros(P.shape[0])
+    Q = np.zeros(P.shape[0])
+    epoch = 0
     while True:
-        _V = np.array(V)
+        epoch += 1
+        delta = 0
         for s in range(P.shape[1]):
-            for a in range(len(v)):
-                v[a] = np.dot(P[a, :, s], (R[a, :, s] + gamma * _V))
-            V[s] = np.max(v)
-        delta = np.linalg.norm(_V - V)
+            v = V[s]
+            if P[0,s,s] == 1:
+                continue
+            for a in range(len(Q)):
+                Q[a] = np.dot(P[a, :, s], (R[a, :, s] + gamma * V))
+            V[s] = np.max(Q)
+            delta = np.max((delta, np.abs(V[s] - v)))
         if delta < lim_delta:
             break
-    Pol = np.array(np.zeros((len(v), len(V))))
+    Pol = np.array(np.zeros((len(Q), len(V))))
     for s in range(Pol.shape[1]):
         decision = np.dot(P[:, :, s], (R[:, :, s] + gamma * V).transpose())
         Pol[np.argmax(np.diagonal(decision)), s] = 1
-    return Pol, V
+    return Pol, V, epoch
