@@ -1,0 +1,36 @@
+ips = sns.load_dataset("tips")
+with open(r'C:\Source_files\Python\BBB\extracted_res', "rb") as f:
+    r = np.array(pickle.load(f))
+
+#algs=["MC", "SARSA", "Q Learning"]
+#df = pd.DataFrame(0, index=np.arange(4), columns=algs, dtype=object)
+
+
+#for t, col in enumerate(algs):
+#    for row in range(4):
+#        df.at[row, col] = r[t, row, :]
+
+#df1 = df.stack().apply(pd.Series).stack().astype(int) \
+#          .rename_axis(['id', 'reality', None]) \
+#          .rename('value').reset_index(['id', 'reality']) \
+#          .reset_index(drop=True)
+
+sns.set()
+#sns.boxplot(x='id', y='value', hue='reality', data=df1)
+m=np.mean
+s=np.std
+print([s(r[t,-1,:])for t in range(3)])
+(_, caps, _) = plt.errorbar(
+    [-1, 4, 9, 14], [m(r[0,t,:]) for t in range(4)], yerr=[s(r[0,t,:])/100 for t in range(4)], fmt='o', markersize=8, capsize=20)
+(_, caps2, _) = plt.errorbar(
+    [0, 5, 10, 15], [m(r[1,t,:]) for t in range(4)], yerr=[s(r[1,t,:])/100 for t in range(4)], fmt='o', markersize=8, capsize=20)
+(_, caps3, _) = plt.errorbar(
+    [1, 6, 11, 16], [m(r[2,t,:]) for t in range(4)], yerr=[s(r[2,t,:])/100 for t in range(4)], fmt='o', markersize=8, capsize=20)
+plt.ylim([0, 0.1])
+for cap in caps:
+    cap.set_markeredgewidth(1)
+for cap in caps2:
+    cap.set_markeredgewidth(1)
+for cap in caps3:
+    cap.set_markeredgewidth(1)
+plt.show()

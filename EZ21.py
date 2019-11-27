@@ -18,12 +18,12 @@ class EZ21:
     def __init__(self, max_length=1000):
         self.max_length = max_length
         self.game_time = 0
-        self.state = [abs(EZ21.draw()), abs(EZ21.draw())]  # [Dealer score, Player Score]
+        self.state = np.array([abs(EZ21.draw()), abs(EZ21.draw())])  # [Dealer score, Player Score]
         self.active_agent = 1
 
     def reset(self):
         self.game_time = 0
-        self.state = [abs(EZ21.draw()), abs(EZ21.draw())]
+        self.state = np.array([abs(EZ21.draw()), abs(EZ21.draw())])
         self.active_agent = 1
         return self.state
 
